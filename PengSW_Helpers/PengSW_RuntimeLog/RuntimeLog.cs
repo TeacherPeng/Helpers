@@ -4,6 +4,9 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace PengSW.RuntimeLog
 {
@@ -37,6 +40,10 @@ namespace PengSW.RuntimeLog
         {
             MinLevelToSave = 9;
             MinLevelToClarify = 9;
+            Thread aWriteThread = new Thread(new ThreadStart(_WriteThread));
+            aWriteThread.IsBackground = true;
+            aWriteThread.Priority = ThreadPriority.Lowest;
+            aWriteThread.Start();
         }
 
         /// <summary>
@@ -172,21 +179,25 @@ namespace PengSW.RuntimeLog
         {
             StringBuilder aLogBuilder = new StringBuilder();
 
+            string aLogWillWrite = null;
             if (!string.IsNullOrEmpty(aFileName) && aLevel <= MinLevelToSave)
             {
                 aLogBuilder.Append(string.Format("[{0:yyyy-MM-dd HH:mm:ss}]", System.DateTime.Now));
                 aLogBuilder.Append(string.Format("[{0}] ", aLevel));
                 aLogBuilder.AppendLine(aWriteLog);
-                _Write(aFileName, aLogBuilder.ToString());
+                aLogWillWrite = aLogBuilder.ToString();
             }
 
+            string aLogWillClarify = null;
             if (aClarify && aLevel <= MinLevelToClarify)
             {
                 aLogBuilder.Length = 0;
                 aLogBuilder.Append($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ");
                 aLogBuilder.AppendLine(aClarifyLog);
-                RaiseClarifyShareLog(aLogBuilder.ToString());
+                aLogWillClarify = aLogBuilder.ToString();
             }
+
+            _LogQueue.Enqueue(new LogTask(aFileName, aLogWillWrite, aLogWillClarify));
 
             if (aShowDialog)
             {
@@ -194,19 +205,39 @@ namespace PengSW.RuntimeLog
             }
         }
 
-        private static object _lockobject = new object();
-        private static void _Write(string aFileName, string aLog)
+        class LogTask
         {
-            try
+            public LogTask(string aFileName, string aLog, string aClarify)
             {
-                lock (_lockobject)
-                {
-                    File.AppendAllText(CreateRealLogFileName(aFileName), aLog, Encoding.Unicode);
-                }
+                FileName = aFileName;
+                Log = aLog;
+                Clarify = aClarify;
             }
-            catch (System.Exception ex)
+            public string FileName;
+            public string Log;
+            public string Clarify;
+        }
+        private static ConcurrentQueue<LogTask> _LogQueue = new ConcurrentQueue<LogTask>();
+        private static void _WriteThread()
+        {
+            while (true)
             {
-                Trace.WriteLine(ex.Message);
+                LogTask aLogTask;
+                if (_LogQueue.TryDequeue(out aLogTask))
+                {
+                    try
+                    {
+                        if (aLogTask.Log != null) File.AppendAllText(CreateRealLogFileName(aLogTask.FileName), aLogTask.Log, Encoding.Unicode);
+                        if (aLogTask.Clarify != null) RaiseClarifyShareLog(aLogTask.Clarify);
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine(ex.Message);
+                    }
+                    Thread.Sleep(10);
+                }
+                else
+                    Thread.Sleep(100);
             }
         }
 

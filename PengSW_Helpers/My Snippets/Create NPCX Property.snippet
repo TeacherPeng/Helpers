@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets
+    xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>Create NPCX Property</Title>
+      <Author>Teacher彭</Author>
+      <Description>生成支持NotifyPropertChangedObject的属性</Description>
+      <Shortcut>npcx</Shortcut>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>PropertyType</ID>
+          <ToolTip>属性类型</ToolTip>
+          <Default>int</Default>
+        </Literal>
+        <Literal>
+          <ID>PropertyName</ID>
+          <ToolTip>属性名称</ToolTip>
+          <Default>MyPropertyName</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="CSharp">
+        <![CDATA[public $PropertyType$ $PropertyName$ { get { return _$PropertyName$; } set { SetValue(ref _$PropertyName$, value, nameof($PropertyName$)); } }
+        private $PropertyType$ _$PropertyName$;]]>
+      </Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

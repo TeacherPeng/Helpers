@@ -10,6 +10,7 @@ namespace PengSW.WindowHelper
     {
         public static void Exec(this FrameworkElement aUIElement, Action aAction, bool aShowWaiting = true)
         {
+            if (aAction == null) return;
             try
             {
                 if (aShowWaiting) aUIElement.Cursor = Cursors.Wait;
@@ -25,6 +26,7 @@ namespace PengSW.WindowHelper
 
         public static T Func<T>(this FrameworkElement aUIElement, Func<T> aFunc, T aDefaultValue, bool aShowWaiting = true)
         {
+            if (aFunc == null) return aDefaultValue;
             try
             {
                 return aFunc();

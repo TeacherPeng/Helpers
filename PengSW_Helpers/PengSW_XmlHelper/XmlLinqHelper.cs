@@ -31,6 +31,16 @@ namespace PengSW.XmlHelper
             return aXAttribute.Value;
         }
 
+        public static DateTime GetAttributeValue(this XElement aXElement, string aAttributeName, DateTime aDefaultValue)
+        {
+            if (aXElement == null) return aDefaultValue;
+            XAttribute aXAttribute = aXElement.Attribute(aAttributeName);
+            if (aXAttribute == null) return aDefaultValue;
+            DateTime aValue = aDefaultValue;
+            if (!DateTime.TryParse(aXAttribute.Value, out aValue)) return aDefaultValue;
+            return aValue;
+        }
+
         public static TimeSpan GetAttributeValue(this XElement aXElement, string aAttributeName, TimeSpan aDefaultValue)
         {
             if (aXElement == null) return aDefaultValue;
@@ -252,8 +262,21 @@ namespace PengSW.XmlHelper
 
         public static XAttribute CreateXAttribute(this object sender, string aAttributeName, object aAttributeValue)
         {
+            return CreateXAttribute(aAttributeName, aAttributeValue);
+        }
+        public static XAttribute CreateXAttribute(string aAttributeName, object aAttributeValue)
+        {
             if (aAttributeValue == null) return null;
             return new XAttribute(aAttributeName, aAttributeValue);
+        }
+        public static XAttribute CreateXAttribute(this object sender, string aAttributeName, TimeSpan aAttributeValue)
+        {
+            return CreateXAttribute(aAttributeName, aAttributeValue);
+        }
+        public static XAttribute CreateXAttribute(string aAttributeName, TimeSpan aAttributeValue)
+        {
+            if (aAttributeValue == null) return null;
+            return new XAttribute(aAttributeName, aAttributeValue.ToString("hh\\:mm\\:ss\\.fff"));
         }
     }
 }
