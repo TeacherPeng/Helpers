@@ -6,24 +6,21 @@
              xmlns:local="clr-namespace:PengSW.RuntimeLog"
              mc:Ignorable="d">
     <DockPanel>
-        <ToolBar DockPanel.Dock="Top">
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
+            <CheckBox IsChecked="{Binding Enabled}" VerticalAlignment="Center" />
             <Button Content=" 清空显示 " Click="OnClear_Click" />
             <Button Content=" 打开日志文件 " Click="OnOpenLogFile_Click" />
-            <Separator />
-            <Label Content="保存" />
+            <Label Content="保存" Margin="10,0,0,0" />
             <TextBox Text="{Binding ReserveDays}" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
-            <Label Content="天" />
-            <Separator />
-            <Label Content="保存级别：" />
+            <Label Content="天，保存级别：" />
             <TextBox Text="{Binding SaveLevel,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
-            <Label Content="显示级别：" />
+            <Label Content="，显示级别：" />
             <TextBox Text="{Binding ClarifyLevel,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" HorizontalContentAlignment="Center" />
-            <Separator />
-            <Label Content="选择显示：" />
+            <Label Content="，选择显示：" />
             <TextBox Text="{Binding ShowPattern,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" HorizontalAlignment="Center" />
-            <Label Content="选择不显示：" />
+            <Label Content="，选择不显示：" />
             <TextBox Text="{Binding UnshowPattern,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" HorizontalAlignment="Center" />
-        </ToolBar>
+        </StackPanel>
         <TextBox x:Name="txtLog" IsReadOnly="True" VerticalScrollBarVisibility="Visible" TextWrapping="Wrap" VerticalAlignment="Stretch" />
     </DockPanel>
 </UserControl>

@@ -4,152 +4,51 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Windows.Forms;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace PengSW.RuntimeLog
 {
     /// <summary>
     /// 运行时日志
-    ///     为简化代码形式，将RuntimeLog简写为RL。
     /// </summary>
-    public class RL
+    public class RuntimeLog : IDisposable
     {
         /// <summary>
         /// 创建一个日志记录器
         /// </summary>
-        /// <param name="aLogFilename">指定日志文件名，不含后缀，约定后缀为.yyyyMMdd.log</param>
-        public RL(string aLogFilename)
+        /// <param name="aFolderName">指定日志文件夹名，日志文件夹会建在dll所在文件夹下。</param>
+        /// <param name="aFilename">指定日志文件名，不含后缀，约定后缀为.yyyyMMdd.log</param>
+        public RuntimeLog(string aFolderName = null, string aLogPrefix = null)
         {
-            LogFileName = aLogFilename;
-        }
-
-        /// <summary>
-        /// 用默认日志文件名创建一个日志记录器
-        /// </summary>
-        public RL()
-        {
-            LogFileName = DefaultLogFileName;
-        }
-
-        /// <summary>
-        /// 默认保存级别为4级，异常信息的级别为0级
-        /// </summary>
-        static RL()
-        {
-            MinLevelToSave = 9;
-            MinLevelToClarify = 9;
-            Thread aWriteThread = new Thread(new ThreadStart(_WriteThread));
-            aWriteThread.IsBackground = true;
-            aWriteThread.Priority = ThreadPriority.Lowest;
-            aWriteThread.Start();
-        }
-
-        /// <summary>
-        /// 指定共享日志记录器的日志文件名
-        /// </summary>
-        /// <param name="aLogFileName">日志文件名，不含后缀，约定后缀为.yyyyMMdd.log</param>
-        public static void SetShareLog(string aLogFileName)
-        {
-            GlobalLogFileName = aLogFileName;
-        }
-        
-        /// <summary>
-        /// 设置默认的共享日志文件名
-        ///     默认的共享日志文件名为主模块名加.log
-        /// </summary>
-        public static void SetShareLog()
-        {
-            SetShareLog(DefaultLogFileName);
-        }
-
-        public static int MinLevelToSave { get; set; }
-        public static int MinLevelToClarify { get; set; }
-
-        private static string DefaultLogFileName
-        {
-            get
+            SetLog(aFolderName, aLogPrefix);
+            _WriteThread = new Thread(new ThreadStart(this.WriteThread))
             {
-                FileInfo aFileInfo = new FileInfo(Process.GetCurrentProcess().MainModule.FileName);
-                string aDirectoryName = aFileInfo.DirectoryName;
-                string aName = Path.GetFileNameWithoutExtension(aFileInfo.Name);
-                return Path.Combine(aDirectoryName, aName);
-            }
+                IsBackground = true,
+                Priority = ThreadPriority.Lowest
+            };
+            _WriteThread.Start();
         }
 
-        public static event System.Action<string> ClarifyShareLog;
-        private static void RaiseClarifyShareLog(string aLog)
+        public void SetLog(string aFolderName = null, string aLogPrefix = null)
         {
-            ClarifyShareLog?.Invoke(aLog);
+            string aAssemblyFolder = Path.GetDirectoryName(GetType().Assembly.Location);
+            string aLogFolderName = string.IsNullOrWhiteSpace(aFolderName) ? aAssemblyFolder : Path.IsPathRooted(aFolderName) ? aFolderName : Path.Combine(aAssemblyFolder, aFolderName);
+            if (!Directory.Exists(aLogFolderName)) Directory.CreateDirectory(aLogFolderName);
+            string aPrefix = string.IsNullOrWhiteSpace(aLogPrefix) ? Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName) : aLogPrefix;
+            LogFileNamePrefix = Path.Combine(aLogFolderName, aPrefix);
         }
 
-        public event System.Action<string> ClarifyLog;
-        private void RaiseClarifyLog(string aLog)
-        {
-            ClarifyLog?.Invoke(aLog);
-        }
+        public void OpenLog() => Process.Start(LogFileName);
 
-        /// <summary>
-        /// 记录运行日志信息
-        /// </summary>
-        /// <param name="aLog">日志内容</param>
-        public void Write(string aLog, bool aShowDialog = false, bool aClarify = true, int aLevel = 0)
+        public void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true, string aTag = null)
         {
-            _Write(LogFileName, aLog, aLog, aLog, aShowDialog, aClarify, aLevel);
+            _Write(aLog, aLog, aLog, aShowDialog, aClarify, aLevel, aTag);
         }
-        public void WriteException(Exception ex, bool aShowDialog = false, bool aClarify = true, string aTitle = null, bool aStackTrace = true)
-        {
-            _WriteException(LogFileName, ex, aShowDialog, aClarify, aTitle, aStackTrace);
-        }
-
-        /// <summary>
-        /// 记录共享运行日志
-        /// </summary>
-        /// <param name="aLog">日志内容</param>
-        public static void WriteLog(string aLog, bool aShowDialog = false, bool aClarify = true, int aLevel = 4)
-        {
-            _Write(GlobalLogFileName, aLog, aLog, aLog, aShowDialog, aClarify, aLevel);
-        }
-        public static void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true)
-        {
-            _Write(GlobalLogFileName, aLog, aLog, aLog, aShowDialog, aClarify, aLevel);
-        }
-
-        public static void WriteExceptionLog(Exception ex, bool aShowDialog = false, bool aClarify = true, string aTitle = null, bool aStackTrace = true)
-        {
-            _WriteException(GlobalLogFileName, ex, aShowDialog, aClarify, aTitle, aStackTrace);
-        }
-
-        public static void WriteExceptionLog(Exception ex, string aTitle, bool aShowDialog = false, bool aClarify = true, bool aStackTrace = true)
-        {
-            _WriteException(GlobalLogFileName, ex, aShowDialog, aClarify, aTitle, aStackTrace);
-        }
-        public static void E(Exception ex, string aTitle, bool aShowDialog = false, bool aClarify = true, bool aStackTrace = true)
-        {
-            _WriteException(GlobalLogFileName, ex, aShowDialog, aClarify, aTitle, aStackTrace);
-        }
-
-        public static void MethodTrace(string aPrefix, params object[] aParameters)
-        {
-            string aMethodName = new StackFrame(1).GetMethod().Name;
-            StringBuilder aStringBuilder = new StringBuilder();
-            aStringBuilder.Append(aPrefix);
-            aStringBuilder.Append(aMethodName);
-            aStringBuilder.Append("(");
-            foreach (object aParameter in aParameters)
-            {
-                aStringBuilder.Append(aParameter);
-                aStringBuilder.Append(", ");
-            }
-            if (aParameters.Length > 0) aStringBuilder.Length -= 2;
-            aStringBuilder.Append(");");
-            WriteLog(aStringBuilder.ToString(), false, false);
-        }
-
-        private static string CreateRealLogFileName(string aFileName) => aFileName + "." + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
-
-        private static void _WriteException(string aFileName, System.Exception ex, bool aShowDialog, bool aClarify, string aTitle, bool aStackTrace)
+        public void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4, string aTag = null) => L(aLog, aLevel, aShowDialog, aClarify, aTag);
+        public void E(Exception ex, string aTitle = null, bool aShowDialog = false, bool aClarify = true, bool aStackTrace = true, string aTag = null)
         {
             StringBuilder aLogBuilder = new StringBuilder();
             StringBuilder aClarifyBuilder = new StringBuilder();
@@ -172,18 +71,57 @@ namespace PengSW.RuntimeLog
                 aLogBuilder.AppendLine(ex.StackTrace);
             }
 
-            _Write(aFileName, aLogBuilder.ToString(), aClarifyBuilder.ToString(), aClarifyBuilder.ToString(), aShowDialog, aClarify, 0);
+            _Write(aLogBuilder.ToString(), aClarifyBuilder.ToString(), aClarifyBuilder.ToString(), aShowDialog, aClarify, 0, aTag);
+        }
+        public void Dispose()
+        {
+            _WriteThread?.Abort();
+            _WriteThread = null;
         }
 
-        private static void _Write(string aFileName, string aWriteLog, string aClarifyLog, string aDialogLog, bool aShowDialog, bool aClarify, int aLevel)
+        public string LogFileNamePrefix { get; set; }
+        public string LogFileName => LogFileNamePrefix + "." + DateTime.Now.ToString("yyyyMMdd") + ".log";
+        public int MinLevelToSave { get; set; } = 9;
+        public int MinLevelToClarify { get; set; } = 9;
+
+        public event Action<string> ClarifyLog;
+
+        #region 日志记录
+
+        class LogTask
         {
+            public LogTask(string aFileName, string aLog, string aClarify)
+            {
+                FileName = aFileName;
+                Log = aLog;
+                Clarify = aClarify;
+            }
+            public string FileName;
+            public string Log;
+            public string Clarify;
+        }
+        private ConcurrentQueue<LogTask> _LogQueue = new ConcurrentQueue<LogTask>();
+
+        private void _Write(string aWriteLog, string aClarifyLog, string aDialogLog, bool aShowDialog, bool aClarify, int aLevel, string aTag)
+        {
+            string aFileName = LogFileName;
             StringBuilder aLogBuilder = new StringBuilder();
 
             string aLogWillWrite = null;
-            if (!string.IsNullOrEmpty(aFileName) && aLevel <= MinLevelToSave)
+            if (!string.IsNullOrWhiteSpace(aFileName) && aLevel <= MinLevelToSave)
             {
-                aLogBuilder.Append(string.Format("[{0:yyyy-MM-dd HH:mm:ss}]", System.DateTime.Now));
-                aLogBuilder.Append(string.Format("[{0}] ", aLevel));
+                aLogBuilder.Append(string.Format("[{0:yyyy-MM-dd HH:mm:ss}]", DateTime.Now));
+                if (string.IsNullOrWhiteSpace(aTag))
+                {
+                    StackTrace aStackTrace = new StackTrace();
+                    Type aType = (from r in aStackTrace.GetFrames() let t = r.GetMethod().ReflectedType where t != typeof(RL) && t != typeof(RuntimeLog) select t).FirstOrDefault();
+                    if (aType != null) aLogBuilder.Append($"[{aType.Name}]");
+                }
+                else
+                {
+                    aLogBuilder.Append($"[{aTag}]");
+                }
+                aLogBuilder.Append($"[{aLevel}] ");
                 aLogBuilder.AppendLine(aWriteLog);
                 aLogWillWrite = aLogBuilder.ToString();
             }
@@ -205,128 +143,81 @@ namespace PengSW.RuntimeLog
             }
         }
 
-        class LogTask
-        {
-            public LogTask(string aFileName, string aLog, string aClarify)
-            {
-                FileName = aFileName;
-                Log = aLog;
-                Clarify = aClarify;
-            }
-            public string FileName;
-            public string Log;
-            public string Clarify;
-        }
-        private static ConcurrentQueue<LogTask> _LogQueue = new ConcurrentQueue<LogTask>();
-        private static void _WriteThread()
-        {
-            while (true)
-            {
-                LogTask aLogTask;
-                if (_LogQueue.TryDequeue(out aLogTask))
-                {
-                    try
-                    {
-                        if (aLogTask.Log != null) File.AppendAllText(CreateRealLogFileName(aLogTask.FileName), aLogTask.Log, Encoding.Unicode);
-                        if (aLogTask.Clarify != null) RaiseClarifyShareLog(aLogTask.Clarify);
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine(ex.Message);
-                    }
-                    Thread.Sleep(10);
-                }
-                else
-                    Thread.Sleep(100);
-            }
-        }
-
-        public string LogFileName  { get; private set; }
-
-        public static string GlobalLogFileName 
-        {
-            get 
-            { 
-                if (string.IsNullOrEmpty(_GlobalLogFileName)) _GlobalLogFileName = DefaultLogFileName;
-                return _GlobalLogFileName; 
-            } 
-            private set
-            {
-                _GlobalLogFileName = value;
-            }
-        }
-        private static string _GlobalLogFileName = null;
-
-        protected static void _OpenLogFile(string aFileName)
+        private void WriteThread()
         {
             try
             {
-                Process.Start(CreateRealLogFileName(aFileName));
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Open Log Failure", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
-        }
-
-        public static void OpenLogFile()
-        {
-            _OpenLogFile(GlobalLogFileName);
-        }
-
-        public void Open()
-        {
-            _OpenLogFile(LogFileName);
-        }
-
-        private static void _RemoveLogFile(System.DateTime aRetainTime, string aFileNameHead)
-        {
-            try
-            {
-                DirectoryInfo aDirectoryInfo = new DirectoryInfo(Path.GetDirectoryName(aFileNameHead));
-                foreach (FileInfo aFileInfo in aDirectoryInfo.GetFiles(Path.GetFileName(aFileNameHead) + ".*.log"))
+                Dictionary<string, StringBuilder> aRecords = new Dictionary<string, StringBuilder>();
+                StringBuilder aClarify = new StringBuilder();
+                while (true)
                 {
-                    Match aMatch = Regex.Match(aFileInfo.Name, @"\.(\d\d\d\d)(\d\d)(\d\d)\.log$", RegexOptions.IgnoreCase);
-                    if (aMatch != null && aMatch.Success)
+                    LogTask aLogTask;
+                    while (_LogQueue.TryDequeue(out aLogTask))
                     {
-                        System.DateTime aFileTime;
-                        if (System.DateTime.TryParse(string.Format("{0}-{1}-{2}", aMatch.Groups[1].Value, aMatch.Groups[2].Value, aMatch.Groups[3].Value), out aFileTime))
+                        try
                         {
-                            if (aFileTime < aRetainTime) aFileInfo.Delete();
+                            if (aLogTask.Log != null)
+                            {
+                                if (!aRecords.ContainsKey(aLogTask.FileName))
+                                    aRecords.Add(aLogTask.FileName, new StringBuilder());
+                                aRecords[aLogTask.FileName].Append(aLogTask.Log);
+                            }
+                            if (aLogTask.Clarify != null) aClarify.Append(aLogTask.Clarify);
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.WriteLine(ex.Message);
                         }
                     }
+                    foreach (var aLog in aRecords)
+                    {
+                        if (aLog.Value.Length > 0)
+                        {
+                            try { File.AppendAllText(aLog.Key, aLog.Value.ToString(), Encoding.Unicode); } catch (Exception ex) { Trace.WriteLine(ex.Message); }
+                            aLog.Value.Length = 0;
+                        }
+                    }
+                    if (aClarify.Length > 0)
+                    {
+                        try { ClarifyLog?.Invoke(aClarify.ToString()); } catch (Exception ex) { Trace.WriteLine(ex.Message); }
+                        aClarify.Length = 0;
+                    }
                 }
+            }
+            catch (ThreadAbortException)
+            {
+                Thread.ResetAbort();
             }
             catch (Exception ex)
             {
-                WriteExceptionLog(ex, false, false);
+                Trace.WriteLine(ex.Message);
             }
         }
 
-        public static void RemoveLogFileBefore(System.DateTime aRetainTime)
-        {
-            _RemoveLogFile(aRetainTime, GlobalLogFileName);
-        }
+        private Thread _WriteThread;
+        
+        #endregion
+    }
 
-        public void RemoveBefore(System.DateTime aRetainTime)
+    public static class RL
+    {
+        public static RuntimeLog GlobalRL
         {
-            _RemoveLogFile(aRetainTime, LogFileName);
-        }
-
-        public static void DumpDatas(object[] aDatas)
-        {
-            System.Text.StringBuilder aStringBuilder = new StringBuilder();
-            aStringBuilder.AppendLine(string.Format("Dump {1}, {0} elements: ", aDatas.Length, aDatas.GetType().Name));
-            foreach (object aData in aDatas)
+            get
             {
-                aStringBuilder.Append("    ");
-                foreach (System.Reflection.PropertyInfo aPropertyInfo in aData.GetType().GetProperties())
-                {
-                    aStringBuilder.Append(string.Format("[{0}]=[{1}], ", aPropertyInfo.Name, aPropertyInfo.GetValue(aData, null)));
-                }
-                aStringBuilder.AppendLine();
+                if (_GlobalRL == null) _GlobalRL = new RuntimeLog();
+                return _GlobalRL;
             }
-            WriteLog(aStringBuilder.ToString());
         }
+        private static RuntimeLog _GlobalRL;
+
+        public static void SetLog(string aFolderName = null, string aLogPrefix = null) => GlobalRL.SetLog(aFolderName, aLogPrefix);
+        public static void OpenLog() => GlobalRL.OpenLog();
+        public static void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true, string aTag = null) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify, aTag);
+        public static void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4, string aTag = null) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify, aTag);
+        public static void E(Exception ex, string aTitle = null, bool aShowDialog = false, bool aClarify = true, bool aStackTrace = true, string aTag = null) => GlobalRL.E(ex, aTitle, aShowDialog, aClarify, aStackTrace, aTag);
+        public static void E(Exception ex, bool aShowDialog, bool aClarify = true, string aTitle = null) => GlobalRL.E(ex, null, aShowDialog, aClarify, true, null);
+        public static int MinLevelToSave { get { return GlobalRL.MinLevelToSave; } set { GlobalRL.MinLevelToSave = value; } }
+        public static int MinLevelToClarify { get { return GlobalRL.MinLevelToClarify; } set { GlobalRL.MinLevelToClarify = value; } }
     }
 }

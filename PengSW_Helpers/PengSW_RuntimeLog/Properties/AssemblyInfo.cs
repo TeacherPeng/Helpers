@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("PengSW-Home")]
 [assembly: AssemblyProduct("PengSW.Runtimelog")]
-[assembly: AssemblyCopyright("Copyright © PengSW-Home 2010")]
+[assembly: AssemblyCopyright("Copyright (C) PengSW-Home 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

@@ -1,41 +1,35 @@
-﻿using System.Windows.Controls;
-using PengSW.NotifyPropertyChanged;
-using PengSW.RuntimeLog;
+﻿using PengSW.NotifyPropertyChanged;
 using System.Windows.Threading;
 using System;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace PengSW.RuntimeLog
 {
     public class RLModel : NotifyPropertyChangedObject, IDisposable
     {
-        public RLModel(RL aRL, Dispatcher aDispatcher)
+        public RLModel(RuntimeLog aRL, Dispatcher aDispatcher)
         {
-            _RL = aRL;
-            _Dispatcher = aDispatcher;
+            rl = aRL ?? RL.GlobalRL;
             RegisteEvent();
-            m_Clearer = new Clearer();
-            m_Clearer.Bind(_RL);
+            _Clearer = new Clearer();
+            _Clearer.Bind(rl);
         }
 
-        public event System.Action<string> Clarify;
-        private Dispatcher _Dispatcher;
+        public event Action<string> Clarify;
+
+        public bool Enabled { get { return _Enabled; } set { SetValue(ref _Enabled, value, nameof(Enabled)); } }
+        private bool _Enabled = true;
 
         protected void RegisteEvent()
         {
-            if (_RL == null)
-            {
-                RL.ClarifyShareLog += new System.Action<string>(RL_ClarifyLog);
-            }
-            else
-            {
-                _RL.ClarifyLog += new System.Action<string>(RL_ClarifyLog);
-            }
+            rl.ClarifyLog += new Action<string>(RL_ClarifyLog);
         }
 
+        private StringBuilder _StringBuilder = new StringBuilder();
         private void RL_ClarifyLog(string aText)
         {
-            if (Clarify == null) return;
+            if (!Enabled) return;
             if (_ShowRegex != null)
             {
                 try
@@ -56,37 +50,34 @@ namespace PengSW.RuntimeLog
                 {
                 }
             }
-            if (_Dispatcher == null)
-                Clarify(aText);
-            else
-                _Dispatcher.BeginInvoke(new Action<string>(Clarify), aText);
+
+            // _StringBuilder.Append(aText.Length > 256 ? aText = aText.Substring(0, 256) + "...\n" : aText);
+            _StringBuilder.Append(aText);
+            if (_StringBuilder.Length > MaxLength)
+            {
+                _StringBuilder.Remove(0, _StringBuilder.Length - MaxLength);
+            }
+            Clarify?.Invoke(_StringBuilder.ToString());
         }
 
         protected void UnregisteEvent()
         {
-            if (_RL == null)
-            {
-                RL.ClarifyShareLog -= RL_ClarifyLog;
-            }
-            else
-            {
-                _RL.ClarifyLog -= RL_ClarifyLog;
-            }
+            rl.ClarifyLog -= RL_ClarifyLog;
         }
 
         public int ReserveDays
         {
-            get { return m_Clearer.ReserveDays; }
+            get { return _Clearer.ReserveDays; }
             set 
             {
-                if (m_Clearer.ReserveDays == value) return;
-                m_Clearer.ReserveDays = value;
+                if (_Clearer.ReserveDays == value) return;
+                _Clearer.ReserveDays = value;
                 OnPropertyChanged(nameof(ReserveDays));
             }
         }
 
-        public int MaxLines { get { return m_MaxLines; } set { SetValue(ref m_MaxLines, value, nameof(MaxLines)); } }
-        private int m_MaxLines = 4096;
+        public int MaxLength { get { return m_MaxLength; } set { SetValue(ref m_MaxLength, value, nameof(MaxLength)); } }
+        private int m_MaxLength = 4096;
 
         public int SaveLevel
         {
@@ -158,17 +149,17 @@ namespace PengSW.RuntimeLog
 
         public void OpenLog()
         {
-            if (_RL == null) RL.OpenLogFile(); else _RL.Open();
+            rl.OpenLog();
         }
 
         public void Dispose()
         {
             UnregisteEvent();
+            _Clearer?.Dispose();
         }
 
-        private RL _RL = null;
-        public RL RL { get { return _RL; } }
+        public RuntimeLog rl { get; }
 
-        private Clearer m_Clearer;
+        private Clearer _Clearer;
     }
 }

@@ -1,37 +1,40 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace PengSW.RuntimeLog
 {
     public class Clearer : Watcher
     {
-        private System.DateTime m_LastLogTime = System.DateTime.MinValue;
-        private int m_ReserveDays = 30;
+        private DateTime _LastLogTime = DateTime.MinValue;
         public int ReserveDays
         {
-            get { return m_ReserveDays; }
-            set { m_ReserveDays = value < 1 ? 1 : value; }
+            get { return _ReserveDays; }
+            set { _ReserveDays = value < 1 ? 1 : value; }
         }
+        private int _ReserveDays = 30;
 
         protected override void RuntimeLog_ClarifyLog(string aText)
         {
-            System.DateTime aLogTime = System.DateTime.Now.Date;
-            if (aLogTime != m_LastLogTime.Date)
+            DateTime aLogTime = DateTime.Now.Date;
+            if (aLogTime != _LastLogTime.Date)
             {
-                System.DateTime aRetainTime = aLogTime.AddDays(-ReserveDays);
-                if (this.RLBinded == null)
+                DateTime aRetainTime = aLogTime.AddDays(-ReserveDays);
+                DirectoryInfo aDirectoryInfo = new DirectoryInfo(Path.GetDirectoryName(_RL.LogFileNamePrefix));
+                foreach (FileInfo aFileInfo in aDirectoryInfo.GetFiles(Path.GetFileName(_RL.LogFileNamePrefix) + ".*.log"))
                 {
-                    RL.RemoveLogFileBefore(aRetainTime);
-                }
-                else
-                {
-                    this.RLBinded.RemoveBefore(aRetainTime);
+                    Match aMatch = Regex.Match(aFileInfo.Name, @"\.(\d\d\d\d)(\d\d)(\d\d)\.log$", RegexOptions.IgnoreCase);
+                    if (aMatch != null && aMatch.Success)
+                    {
+                        DateTime aFileTime;
+                        if (DateTime.TryParse($"{aMatch.Groups[1].Value}-{aMatch.Groups[2].Value}-{aMatch.Groups[3].Value}", out aFileTime))
+                        {
+                            if (aFileTime < aRetainTime) aFileInfo.Delete();
+                        }
+                    }
                 }
             }
-            m_LastLogTime = aLogTime;
+            _LastLogTime = aLogTime;
         }
     }
 }

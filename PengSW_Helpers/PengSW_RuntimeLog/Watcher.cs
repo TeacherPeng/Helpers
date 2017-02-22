@@ -15,50 +15,38 @@ namespace PengSW.RuntimeLog
 
         protected void RegisteEvent()
         {
-            if (m_RL == null)
-            {
-                RL.ClarifyShareLog += new System.Action<string>(RuntimeLog_ClarifyLog);
-            }
-            else
-            {
-                m_RL.ClarifyLog += new System.Action<string>(RuntimeLog_ClarifyLog);
-            }
+            if (_RL != null) _RL.ClarifyLog += RuntimeLog_ClarifyLog;
         }
 
         protected void UnregisteEvent()
         {
-            if (m_RL == null)
-            {
-                RL.ClarifyShareLog -= RuntimeLog_ClarifyLog;
-            }
-            else
-            {
-                m_RL.ClarifyLog -= RuntimeLog_ClarifyLog;
-            }
+            if (_RL != null) _RL.ClarifyLog -= RuntimeLog_ClarifyLog;
         }
 
-        public void Bind(RL aRL)
+        public void Bind(RuntimeLog aRL)
         {
-            UnregisteEvent();
-            m_RL = aRL;
-            RegisteEvent();
+            RLBinded = aRL;
         }
 
-        public RL RLBinded { get { return m_RL; } }
+        public RuntimeLog RLBinded
+        {
+            get { return _RL; }
+            set
+            {
+                if (_RL == value) return;
+                UnregisteEvent();
+                _RL = value ?? RL.GlobalRL;
+                RegisteEvent();
+            }
+        }
+        protected RuntimeLog _RL = null;
 
         protected abstract void RuntimeLog_ClarifyLog(string aText);
 
-        protected RL m_RL = null;
-
-        protected virtual void Dispose(bool aMode)
-        {
-            UnregisteEvent();
-            m_RL = null;
-        }
-
         public void Dispose()
         {
-            Dispose(true);
+            if (_RL != null) UnregisteEvent();
+            _RL = null;
         }
     }
 }

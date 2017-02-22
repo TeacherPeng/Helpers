@@ -14,29 +14,36 @@ namespace PengSW.RuntimeLog
         {
             InitializeComponent();
             Bind(null);
+            _Timer.Interval = TimeSpan.FromMilliseconds(500);
+            _Timer.Tick += OnTimer_Tick;
         }
 
-        private RLModel m_Model;
-
-        public void Bind(RL aRL)
+        private string _LogText;
+        private void OnTimer_Tick(object sender, EventArgs e)
         {
-            m_Model = new RLModel(aRL, this.Dispatcher);
-            m_Model.Clarify += RL_ClarifyLog;
-            this.DataContext = m_Model;
+            txtLog.Text = _LogText;
+            txtLog.SelectionStart = _LogText.Length;
+            txtLog.ScrollToEnd();
+            _Timer.Stop();
+        }
+
+        private RLModel _Model;
+        private DispatcherTimer _Timer = new DispatcherTimer();
+
+        public void Bind(RuntimeLog aRL)
+        {
+            _Model?.Dispose();
+            _Model = new RLModel(aRL, this.Dispatcher);
+            _Model.Clarify += RL_ClarifyLog;
+            this.DataContext = _Model;
         }
 
         protected void UpdateLog(string aText)
         {
             try
             {
-                if (aText.Length > 256) aText = aText.Substring(0, 256) + "...\n";
-                txtLog.AppendText(aText);
-                if (txtLog.Text.Length > m_Model.MaxLines)
-                {
-                    txtLog.Text = txtLog.Text.Substring(txtLog.Text.Length - m_Model.MaxLines);
-                }
-                txtLog.SelectionStart = txtLog.Text.Length;
-                txtLog.ScrollToEnd();
+                _LogText = aText;
+                if (!_Timer.IsEnabled) _Timer.Start();
             }
             catch
             {
@@ -45,7 +52,7 @@ namespace PengSW.RuntimeLog
 
         private void RL_ClarifyLog(string aText)
         {
-            Dispatcher.BeginInvoke(new Action<string>(UpdateLog), aText);
+            UpdateLog(aText);
         }
 
         private void OnClear_Click(object sender, RoutedEventArgs e)
@@ -55,7 +62,7 @@ namespace PengSW.RuntimeLog
 
         private void OnOpenLogFile_Click(object sender, RoutedEventArgs e)
         {
-            m_Model.OpenLog();
+            _Model.OpenLog();
         }
     }
 }
