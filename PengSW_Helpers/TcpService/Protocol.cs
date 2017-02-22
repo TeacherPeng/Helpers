@@ -142,7 +142,7 @@ namespace PengSW.TcpService
         ///     如果将最大字节数设为0，意味着不限制帧的字节数。
         ///     默认为4M。
         /// </summary>
-        public uint FrameMaxBytes { get; set; }
+        public uint FrameMaxBytes { get; set; } = 4096 * 1024;
 
         /// <summary>
         /// 组成帧的字节块接收到的时间的最大间隔（单位为毫秒）。

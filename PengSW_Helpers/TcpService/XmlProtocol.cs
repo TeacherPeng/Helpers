@@ -1,4 +1,6 @@
-﻿namespace PengSW.TcpService
+﻿using System.Xml.Linq;
+
+namespace PengSW.TcpService
 {
     /// <summary>
     /// 基于Xml的应用协议类。
@@ -39,7 +41,7 @@
             aText = m_Encoding.GetString(_ByteBuffer.TotalBytes);
             try
             {
-                new System.Xml.XmlDocument().LoadXml(aText);
+                XDocument.Parse(aText);
                 return true;
             }
             catch
@@ -53,10 +55,8 @@
             string aText = m_Encoding.GetString(aBytes);
             try
             {
-                System.Xml.XmlDocument aXmlDocument = new System.Xml.XmlDocument();
-                aXmlDocument.LoadXml(aText);
                 ClarifyFrameReceived(aText);
-                ClarifyObjectReceived(aXmlDocument);
+                ClarifyObjectReceived(XDocument.Parse(aText));
                 return true;
             }
             catch
@@ -70,19 +70,17 @@
     {
         public XmlProtocolFactory()
         {
-            m_Encoding = System.Text.Encoding.UTF8;
+            _Encoding = System.Text.Encoding.UTF8;
         }
 
         public XmlProtocolFactory(System.Text.Encoding aEncoding)
         {
-            m_Encoding = aEncoding;
+            _Encoding = aEncoding;
         }
 
-        private System.Text.Encoding m_Encoding;
+        private System.Text.Encoding _Encoding;
 
-        public Protocol CreateProtocol()
-        {
-            return new XmlProtocol(m_Encoding);
-        }
+        public Protocol CreateProtocol() => new XmlProtocol(_Encoding);
+        public string CreateName() => "XmlConnection";
     }
 }

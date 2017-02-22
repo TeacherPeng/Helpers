@@ -9,15 +9,18 @@ namespace PengSW.TcpService
     public interface IProtocolFactory
     {
         Protocol CreateProtocol();
+        string CreateName();
     }
 
     public class DefaultProtocolFactory<T> : IProtocolFactory where T : Protocol, new()
     {
-        public DefaultProtocolFactory(TimeSpan? aReceiveTimeOut = null)
+        public DefaultProtocolFactory(string aConnectionName, TimeSpan? aReceiveTimeOut = null)
         {
+            _ConnectionName = aConnectionName;
             _ReceiveTimeSpan = aReceiveTimeOut;
         }
 
+        private string _ConnectionName;
         private TimeSpan? _ReceiveTimeSpan;
 
         public Protocol CreateProtocol()
@@ -26,5 +29,7 @@ namespace PengSW.TcpService
             if (_ReceiveTimeSpan != null) aProtocol.ReceiveTimeOut = _ReceiveTimeSpan.Value;
             return aProtocol;
         }
+
+        public string CreateName() => _ConnectionName;
     }
 }
