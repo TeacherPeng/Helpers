@@ -33,7 +33,6 @@ namespace PengSW.RuntimeLog
             get { return _RL; }
             set
             {
-                if (_RL == value) return;
                 UnregisteEvent();
                 _RL = value ?? RL.GlobalRL;
                 RegisteEvent();

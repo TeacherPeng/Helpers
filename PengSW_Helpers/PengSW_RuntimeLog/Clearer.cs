@@ -26,8 +26,7 @@ namespace PengSW.RuntimeLog
                     Match aMatch = Regex.Match(aFileInfo.Name, @"\.(\d\d\d\d)(\d\d)(\d\d)\.log$", RegexOptions.IgnoreCase);
                     if (aMatch != null && aMatch.Success)
                     {
-                        DateTime aFileTime;
-                        if (DateTime.TryParse($"{aMatch.Groups[1].Value}-{aMatch.Groups[2].Value}-{aMatch.Groups[3].Value}", out aFileTime))
+                        if (DateTime.TryParse($"{aMatch.Groups[1].Value}-{aMatch.Groups[2].Value}-{aMatch.Groups[3].Value}", out DateTime aFileTime))
                         {
                             if (aFileTime < aRetainTime) aFileInfo.Delete();
                         }

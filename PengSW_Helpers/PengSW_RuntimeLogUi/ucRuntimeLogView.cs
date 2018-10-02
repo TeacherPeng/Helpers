@@ -7,23 +7,23 @@ namespace PengSW.RuntimeLog
         public ucRuntimeLogView()
         {
             InitializeComponent();
-            m_Watcher = new RuntimeLogToTextBox(txtLog);
+            _Watcher = new RuntimeLogToTextBox(txtLog);
         }
 
-        private RuntimeLogToTextBox m_Watcher;
+        private RuntimeLogToTextBox _Watcher;
 
         public int MaxLength 
         { 
-            get { return m_Watcher.MaxLength; }
-            set { m_Watcher.MaxLength = value; }
+            get { return _Watcher.MaxLength; }
+            set { _Watcher.MaxLength = value; }
         }
 
-        public void Bind(RL aRuntimeLog)
+        public void Bind(RuntimeLog aRuntimeLog)
         {
-            m_Watcher.Bind(aRuntimeLog);
+            _Watcher.Bind(aRuntimeLog);
         }
 
-        public RL RuntimeLog { get { return m_Watcher.RLBinded; } }
+        public RuntimeLog RuntimeLog { get { return _Watcher.RLBinded; } }
 
         public void Clear()
         {

@@ -1,0 +1,37 @@
+﻿<Window x:Class="PengSW.InputHelper.OpenTextFileDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" WindowStartupLocation="CenterScreen"
+        Title="打开文本文件" Height="480" Width="640" Icon="input.ico">
+    <Window.Resources>
+        <RoutedCommand x:Key="Preview" />
+        <RoutedCommand x:Key="Ok" />
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource Preview}" Executed="OnPreview_Executed" CanExecute="OnPreview_CanExecute" />
+        <CommandBinding Command="{StaticResource Ok}" Executed="OnOk_Executed" CanExecute="OnOk_CanExecute" />
+    </Window.CommandBindings>
+    <DockPanel Margin="10">
+        <DockPanel DockPanel.Dock="Top" Margin="5">
+            <Label Content="目标文件：" DockPanel.Dock="Left" />
+            <Button Content=" .. " DockPanel.Dock="Right" Click="OnBrowse_Click" />
+            <TextBox Text="{Binding FileName}" />
+        </DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="5">
+            <Label Content="编码：" DockPanel.Dock="Left" />
+            <ComboBox ItemsSource="{Binding Encodings}" SelectedItem="{Binding CurrentEncoding}" DisplayMemberPath="EncodingName" />
+        </DockPanel>
+        <UniformGrid Rows="1" DockPanel.Dock="Bottom">
+            <Button Content="确定(_O)" IsDefault="True" Command="{StaticResource Ok}" />
+            <Button Content="取消(_C)" IsCancel="True" />
+        </UniformGrid>
+        <GroupBox Margin="5">
+            <GroupBox.Header>
+                <Button Content=" 预览 " Command="{StaticResource Preview}" />
+            </GroupBox.Header>
+            <TextBlock Text="{Binding PreviewText}" HorizontalAlignment="Left" VerticalAlignment="Top" TextWrapping="Wrap" Foreground="{Binding PreviewBrush}" />
+        </GroupBox>
+    </DockPanel>
+</Window>

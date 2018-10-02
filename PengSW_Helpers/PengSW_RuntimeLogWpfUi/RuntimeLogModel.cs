@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using System;
 using System.Text.RegularExpressions;
 using System.Text;
+using System.Windows;
 
 namespace PengSW.RuntimeLog
 {
@@ -58,6 +59,11 @@ namespace PengSW.RuntimeLog
                 _StringBuilder.Remove(0, _StringBuilder.Length - MaxLength);
             }
             Clarify?.Invoke(_StringBuilder.ToString());
+        }
+
+        public void Clear()
+        {
+            _StringBuilder.Length = 0;
         }
 
         protected void UnregisteEvent()
@@ -149,7 +155,14 @@ namespace PengSW.RuntimeLog
 
         public void OpenLog()
         {
-            rl.OpenLog();
+            try
+            {
+                rl.OpenLog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         public void Dispose()

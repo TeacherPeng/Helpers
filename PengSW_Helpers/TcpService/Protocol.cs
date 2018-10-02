@@ -31,6 +31,17 @@ namespace PengSW.TcpService
             ReceiveTimeOut = TimeSpan.Zero;
         }
 
+        /// <summary>
+        /// 由于Protocol实例中会保存收到的数据，因此一个Protocol实例不能被多个Connection实例共用。（更合理的设计应该是分成协议类和协议数据类，将协议与收到的数据分开）
+        /// 因此Protocol实例应该与所属的Connection实例关联，但由于Protocol实例是构造Connection实例的参数，因此不能在Protocol的构造参数中指定所属的Connection实例。
+        /// 约定Connection实例在构造时，需要将自身关联到Protocol实例中。
+        /// </summary>
+        protected Connection _Connection;
+        public void SetConnection(Connection aConnection)
+        {
+            if (_Connection == null) _Connection = aConnection;
+        }
+
         #endregion
 
         #region IDisposable 成员
@@ -58,7 +69,7 @@ namespace PengSW.TcpService
         /// </summary>
         /// <param name="aConnection">发出通知的连接</param>
         /// <param name="aBytes">接收到的数据片</param>
-        public void ClarifyReceivedBytes(Connection aConnection, byte[] aBytes)
+        public void OnBytesReceived(byte[] aBytes)
         {
             // 超时检查，如果超时则将帧首标志复位，准备重新接收帧
             System.DateTime aReceivedTime = System.DateTime.Now;
@@ -87,7 +98,7 @@ namespace PengSW.TcpService
                 if (HasFrameTail(_ByteBuffer.LastBytes))
                 {
                     // 分析收到的包含完整数据帧的字节块
-                    AnalyBytes(aConnection, _ByteBuffer.TotalBytes);
+                    AnalyBytes(_ByteBuffer.TotalBytes);
 
                     // 复位接收标志，准备接收新的数据帧
                     HeadReceived = false;
@@ -187,7 +198,7 @@ namespace PengSW.TcpService
         /// <param name="aConnection">调用分析方法的连接，可用来发送回复信息</param>
         /// <param name="aBytes">待分析字节块</param>
         /// <returns>如果不能正常接收此字节块，则返回false</returns>
-        protected abstract bool AnalyBytes(Connection aConnection, byte[] aBytes);
+        protected abstract bool AnalyBytes(byte[] aBytes);
 
         #endregion
 
@@ -210,7 +221,7 @@ namespace PengSW.TcpService
         /// <summary>
         /// 记录收到数据块的时间，用来判断帧超时
         /// </summary>
-        protected System.DateTime _ReceivedTime = System.DateTime.MinValue;
+        protected DateTime _ReceivedTime = DateTime.MinValue;
 
         #endregion
     }

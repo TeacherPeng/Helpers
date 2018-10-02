@@ -22,19 +22,17 @@ namespace PengSW.JsonHelper
             return Encoding.UTF8.GetString(GetJsonBytes(aObject));
         }
 
-        public static T ReadObjectFromJsonFile<T>(string aFileName) where T : class
+        public static T ReadObjectFromJsonFile<T>(string aFileName) where T : class => ReadObjectFromJsonFile<T>(aFileName, Encoding.UTF8);
+
+        public static T ReadObjectFromJsonFile<T>(string aFileName, Encoding aEncoding) where T : class
         {
-            using (FileStream aStream = File.Open(aFileName, FileMode.Open))
-            {
-                DataContractJsonSerializer aJsonSerializer = new DataContractJsonSerializer(typeof(T));
-                T aObject = aJsonSerializer.ReadObject(aStream) as T;
-                return aObject;
-            }
+            string aJsonText = File.ReadAllText(aFileName, aEncoding);
+            return ReadObjectFromJsonText<T>(aJsonText);
         }
 
         public static T ReadObjectFromJsonText<T>(string aJsonText) where T : class
         {
-            using (MemoryStream aStream = new MemoryStream(Encoding.UTF8.GetBytes(aJsonText)))
+            using (MemoryStream aStream = new MemoryStream(Encoding.UTF8.GetBytes(aJsonText.Trim())))
             {
                 DataContractJsonSerializer aJsonSerializer = new DataContractJsonSerializer(typeof(T));
                 T aObject = aJsonSerializer.ReadObject(aStream) as T;

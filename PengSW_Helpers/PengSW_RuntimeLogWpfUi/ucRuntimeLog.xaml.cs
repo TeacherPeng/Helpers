@@ -21,9 +21,15 @@ namespace PengSW.RuntimeLog
         private string _LogText;
         private void OnTimer_Tick(object sender, EventArgs e)
         {
-            txtLog.Text = _LogText;
-            txtLog.SelectionStart = _LogText.Length;
-            txtLog.ScrollToEnd();
+            try
+            {
+                txtLog.Text = _LogText;
+                txtLog.SelectionStart = _LogText.Length;
+                txtLog.ScrollToEnd();
+            }
+            catch
+            {
+            }
             _Timer.Stop();
         }
 
@@ -57,6 +63,7 @@ namespace PengSW.RuntimeLog
 
         private void OnClear_Click(object sender, RoutedEventArgs e)
         {
+            _Model.Clear();
             txtLog.Clear();
         }
 

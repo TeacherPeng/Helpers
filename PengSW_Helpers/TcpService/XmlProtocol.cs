@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Text;
+using System.Xml.Linq;
 
 namespace PengSW.TcpService
 {
@@ -14,15 +15,15 @@ namespace PengSW.TcpService
         /// </summary>
         public XmlProtocol()
         {
-            m_Encoding = System.Text.Encoding.UTF8;
+            _Encoding = Encoding.UTF8;
         }
 
         public XmlProtocol(System.Text.Encoding aEncoding)
         {
-            m_Encoding = aEncoding;
+            _Encoding = aEncoding;
         }
 
-        protected System.Text.Encoding m_Encoding;
+        protected System.Text.Encoding _Encoding;
 
         protected override void OnStart()
         {
@@ -30,15 +31,15 @@ namespace PengSW.TcpService
 
         protected override bool HasFrameHead(byte[] aBytes)
         {
-            string aText = m_Encoding.GetString(aBytes);
+            string aText = _Encoding.GetString(aBytes);
             return System.Text.RegularExpressions.Regex.IsMatch(aText, @"^\s*<([^\s/<>]+).*>");
         }
 
         protected override bool HasFrameTail(byte[] aBytes)
         {
-            string aText = m_Encoding.GetString(aBytes);
+            string aText = _Encoding.GetString(aBytes);
             if (!System.Text.RegularExpressions.Regex.IsMatch(aText, @"</([^\s/<>]+)>\s*$|/>\s*$|^[^<]+>\s*$")) return false;
-            aText = m_Encoding.GetString(_ByteBuffer.TotalBytes);
+            aText = _Encoding.GetString(_ByteBuffer.TotalBytes);
             try
             {
                 XDocument.Parse(aText);
@@ -50,9 +51,9 @@ namespace PengSW.TcpService
             }
         }
 
-        protected override bool AnalyBytes(Connection aConnection, byte[] aBytes)
+        protected override bool AnalyBytes(byte[] aBytes)
         {
-            string aText = m_Encoding.GetString(aBytes);
+            string aText = _Encoding.GetString(aBytes);
             try
             {
                 ClarifyFrameReceived(aText);

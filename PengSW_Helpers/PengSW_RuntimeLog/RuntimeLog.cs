@@ -1,13 +1,14 @@
+// #define NET40
 using System;
 using System.Text;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace PengSW.RuntimeLog
 {
@@ -19,9 +20,9 @@ namespace PengSW.RuntimeLog
         /// <summary>
         /// 创建一个日志记录器
         /// </summary>
-        /// <param name="aFolderName">指定日志文件夹名，日志文件夹会建在dll所在文件夹下。</param>
+        /// <param name="aFolderName">指定日志文件夹名，日志文件夹会建在dll所在文件夹下的log文件夹中。</param>
         /// <param name="aFilename">指定日志文件名，不含后缀，约定后缀为.yyyyMMdd.log</param>
-        public RuntimeLog(string aFolderName = null, string aLogPrefix = null)
+        public RuntimeLog(string aFolderName = "log", string aLogPrefix = null)
         {
             SetLog(aFolderName, aLogPrefix);
             _WriteThread = new Thread(new ThreadStart(this.WriteThread))
@@ -32,7 +33,7 @@ namespace PengSW.RuntimeLog
             _WriteThread.Start();
         }
 
-        public void SetLog(string aFolderName = null, string aLogPrefix = null)
+        public void SetLog(string aFolderName = "log", string aLogPrefix = null)
         {
             string aAssemblyFolder = Path.GetDirectoryName(GetType().Assembly.Location);
             string aLogFolderName = string.IsNullOrWhiteSpace(aFolderName) ? aAssemblyFolder : Path.IsPathRooted(aFolderName) ? aFolderName : Path.Combine(aAssemblyFolder, aFolderName);
@@ -42,12 +43,23 @@ namespace PengSW.RuntimeLog
         }
 
         public void OpenLog() => Process.Start(LogFileName);
+        public string GetLog() => File.ReadAllText(LogFileName); // TODO: 如果日志文件过大，应只返回最后一部分内容。
 
-        public void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true, string aTag = null)
+#if NET40
+        public void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true)
+#else
+        public void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true, [CallerFilePath] string aCallerFilePath = null, [CallerMemberName] string aCallerMember = null)
+#endif
         {
-            _Write(aLog, aLog, aLog, aShowDialog, aClarify, aLevel, aTag);
+            _Write(aLog, aLog, aLog, aShowDialog, aClarify, aLevel, null);
         }
-        public void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4, string aTag = null) => L(aLog, aLevel, aShowDialog, aClarify, aTag);
+
+#if NET40
+        public void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4) => L(aLog, aLevel, aShowDialog, aClarify);
+#else
+        public void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4, [CallerFilePath] string aCallerFilePath = null, [CallerMemberName] string aCallerMember = null) => L(aLog, aLevel, aShowDialog, aClarify, aCallerFilePath, aCallerMember);
+#endif
+
         public void E(Exception ex, string aTitle = null, bool aShowDialog = false, bool aClarify = true, bool aStackTrace = true, string aTag = null)
         {
             StringBuilder aLogBuilder = new StringBuilder();
@@ -86,7 +98,9 @@ namespace PengSW.RuntimeLog
 
         public event Action<string> ClarifyLog;
 
-        #region 日志记录
+#region 日志记录
+
+        private readonly Encoding _Encoding = Encoding.UTF8;
 
         class LogTask
         {
@@ -136,13 +150,14 @@ namespace PengSW.RuntimeLog
             }
 
             _LogQueue.Enqueue(new LogTask(aFileName, aLogWillWrite, aLogWillClarify));
-
+            _WriteAutoReset.Set();
             if (aShowDialog)
             {
-                MessageBox.Show(aDialogLog, "Runtime Message", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show(aDialogLog, "提示", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
 
+        private AutoResetEvent _WriteAutoReset = new AutoResetEvent(true);
         private void WriteThread()
         {
             try
@@ -151,8 +166,7 @@ namespace PengSW.RuntimeLog
                 StringBuilder aClarify = new StringBuilder();
                 while (true)
                 {
-                    LogTask aLogTask;
-                    while (_LogQueue.TryDequeue(out aLogTask))
+                    while (_LogQueue.TryDequeue(out LogTask aLogTask))
                     {
                         try
                         {
@@ -173,7 +187,7 @@ namespace PengSW.RuntimeLog
                     {
                         if (aLog.Value.Length > 0)
                         {
-                            try { File.AppendAllText(aLog.Key, aLog.Value.ToString(), Encoding.Unicode); } catch (Exception ex) { Trace.WriteLine(ex.Message); }
+                            try { File.AppendAllText(aLog.Key, aLog.Value.ToString(), _Encoding); } catch (Exception ex) { Trace.WriteLine(ex.Message); }
                             aLog.Value.Length = 0;
                         }
                     }
@@ -182,6 +196,7 @@ namespace PengSW.RuntimeLog
                         try { ClarifyLog?.Invoke(aClarify.ToString()); } catch (Exception ex) { Trace.WriteLine(ex.Message); }
                         aClarify.Length = 0;
                     }
+                    _WriteAutoReset.WaitOne(5);
                 }
             }
             catch (ThreadAbortException)
@@ -196,7 +211,7 @@ namespace PengSW.RuntimeLog
 
         private Thread _WriteThread;
         
-        #endregion
+#endregion
     }
 
     public static class RL
@@ -213,8 +228,14 @@ namespace PengSW.RuntimeLog
 
         public static void SetLog(string aFolderName = null, string aLogPrefix = null) => GlobalRL.SetLog(aFolderName, aLogPrefix);
         public static void OpenLog() => GlobalRL.OpenLog();
-        public static void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true, string aTag = null) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify, aTag);
-        public static void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4, string aTag = null) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify, aTag);
+        public static string GetLog() => GlobalRL.GetLog();
+#if NET40
+        public static void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify);
+        public static void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify);
+#else
+        public static void L(string aLog, int aLevel = 4, bool aShowDialog = false, bool aClarify = true, [CallerFilePath] string aCallerFilePath = null, [CallerMemberName] string aCallerMember = null) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify, aCallerFilePath, aCallerMember);
+        public static void L(string aLog, bool aShowDialog, bool aClarify = true, int aLevel = 4, [CallerFilePath] string aCallerFilePath = null, [CallerMemberName] string aCallerMember = null) => GlobalRL.L(aLog, aLevel, aShowDialog, aClarify, aCallerFilePath, aCallerMember);
+#endif
         public static void E(Exception ex, string aTitle = null, bool aShowDialog = false, bool aClarify = true, bool aStackTrace = true, string aTag = null) => GlobalRL.E(ex, aTitle, aShowDialog, aClarify, aStackTrace, aTag);
         public static void E(Exception ex, bool aShowDialog, bool aClarify = true, string aTitle = null) => GlobalRL.E(ex, null, aShowDialog, aClarify, true, null);
         public static int MinLevelToSave { get { return GlobalRL.MinLevelToSave; } set { GlobalRL.MinLevelToSave = value; } }

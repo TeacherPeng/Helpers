@@ -14,7 +14,10 @@
     </Window.CommandBindings>
     <UniformGrid Columns="1" Margin="10">
         <TextBlock Text="{Binding Prompt}" VerticalAlignment="Center" />
-        <TextBox x:Name="txtValue" Text="{Binding Value,UpdateSourceTrigger=PropertyChanged}" TabIndex="0" VerticalAlignment="Center" GotFocus="txtValue_GotFocus" />
+        <Grid>
+            <TextBox x:Name="txtValue" Text="{Binding Value,UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" />
+            <ComboBox x:Name="cboValue" Text="{Binding Value,UpdateSourceTrigger=PropertyChanged}" IsEditable="True" ItemsSource="{Binding Values}" TabIndex="0" VerticalAlignment="Center" />
+        </Grid>
         <TextBlock Text="{Binding ValidateInfo}" VerticalAlignment="Center" Foreground="Red" />
         <UniformGrid Rows="1">
             <Button Content="确定(_O)" IsDefault="True" Command="{StaticResource Ok}" Margin="5" />

@@ -48,7 +48,7 @@ namespace PengSW.TcpService
                 IsListening = true;
                 _TcpListener.Start();
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 ClarifyInfo(string.Format("启动监听端口[{0}]发生错误：{1}", ListenPort, ex.Message), 0);
                 IsListening = false;
@@ -78,7 +78,7 @@ namespace PengSW.TcpService
                     ClarifyInfo(string.Format("关闭对端口[{0}]的侦听……", ListenPort), 1);
                     _TcpListener.Stop();
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     ClarifyInfo(string.Format("关闭对端口[{1}]的侦听发生错误：{0}", ex.Message, ListenPort), 0);
                 }
@@ -91,6 +91,7 @@ namespace PengSW.TcpService
             // 关闭连接
             foreach (Connection aConnection in _Connections)
             {
+                if (aConnection == null) continue;
                 try
                 {
                     ClarifyInfo($"关闭与{this}的连接……", 1);
@@ -115,8 +116,10 @@ namespace PengSW.TcpService
         /// <param name="aBytes">广播内容</param>
         public void SayToAll(byte[] aBytes)
         {
+            if (aBytes == null || aBytes.Length == 0) return;
             foreach (Connection aConnection in _Connections)
             {
+                if (aConnection == null) continue;
                 if (aConnection.IsConnected)
                 {
                     try
@@ -180,7 +183,7 @@ namespace PengSW.TcpService
                 // 创建Connection对象，并建立连接
                 // 在连接建立之前，没有发现方法来识别请求者，这意味着在连接之前不可能区分请求者，因而也不可能根据不同的请求者建立不同性质的连接。
                 // 将连接能否建立以及如何建立交托给Connection类处理。
-                Connection aConnection = new Connection(_ProtocolFactory == null ? null : _ProtocolFactory.CreateProtocol(), _ProtocolFactory == null ? null : _ProtocolFactory.CreateName());
+                Connection aConnection = new Connection(_ProtocolFactory?.CreateProtocol(), _ProtocolFactory?.CreateName());
                 aConnection.Clarify += new Connection.ClarifyDelegate(Connection_Clarify);
                 aConnection.Received += new Connection.ReceivedDelegate(Clarify_Received);
                 aConnection.BytesFrameReceived += new System.Action<Connection, byte[]>(Connection_BytesFrameReceived);
@@ -196,7 +199,7 @@ namespace PengSW.TcpService
                     Connected?.Invoke(this, aConnection);
                     OnPropertyChanged(nameof(ConnectionCount));
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     ClarifyInfo(string.Format("接受端口[{0}]上的连接请求发生错误：{1}", ListenPort, ex.Message), 0);
 
@@ -206,7 +209,7 @@ namespace PengSW.TcpService
                 }
                 if (IsListening) _TcpListener.BeginAcceptTcpClient(_ListenCallback, null);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 ClarifyInfo($"端口[{ListenPort}]的连接请求处理发生错误：{ex.Message}", 0);
             }
@@ -279,11 +282,9 @@ namespace PengSW.TcpService
         #region 内部对象
 
         private System.Net.Sockets.TcpListener _TcpListener = null;
-        private AsyncCallback _ListenCallback;
-
+        private readonly AsyncCallback _ListenCallback;
         private List<Connection> _Connections = new List<Connection>();
-
-        private IProtocolFactory _ProtocolFactory = null;
+        private readonly IProtocolFactory _ProtocolFactory = null;
 
         #endregion
     }

@@ -15,6 +15,51 @@ namespace PengSW.XmlHelper
             return aChildXElement.Value;
         }
 
+        public static int GetChildNodeValue(this XElement aXElement, string aChildNodeName, int aDefaultValue)
+        {
+            if (aXElement == null) return aDefaultValue;
+            XElement aChildXElement = aXElement.Element(aChildNodeName);
+            if (aChildXElement == null) return aDefaultValue;
+            int aValue = aDefaultValue;
+            return int.TryParse(aChildXElement.Value, out aValue) ? aValue : aDefaultValue;
+        }
+
+        public static DateTime GetChildNodeValue(this XElement aXElement, string aChildNodeName, DateTime aDefaultValue)
+        {
+            if (aXElement == null) return aDefaultValue;
+            XElement aChildXElement = aXElement.Element(aChildNodeName);
+            if (aChildXElement == null) return aDefaultValue;
+            DateTime aValue = aDefaultValue;
+            return DateTime.TryParse(aChildXElement.Value, out aValue) ? aValue : aDefaultValue;
+        }
+
+        public static TimeSpan GetChildNodeValue(this XElement aXElement, string aChildNodeName, TimeSpan aDefaultValue)
+        {
+            if (aXElement == null) return aDefaultValue;
+            XElement aChildXElement = aXElement.Element(aChildNodeName);
+            if (aChildXElement == null) return aDefaultValue;
+            TimeSpan aValue = aDefaultValue;
+            return TimeSpan.TryParse(aChildXElement.Value, out aValue) ? aValue : aDefaultValue;
+        }
+
+        public static double GetChildNodeValue(this XElement aXElement, string aChildNodeName, double aDefaultValue)
+        {
+            if (aXElement == null) return aDefaultValue;
+            XElement aChildXElement = aXElement.Element(aChildNodeName);
+            if (aChildXElement == null) return aDefaultValue;
+            double aValue = aDefaultValue;
+            return double.TryParse(aChildXElement.Value, out aValue) ? aValue : aDefaultValue;
+        }
+
+        public static bool GetChildNodeValue(this XElement aXElement, string aChildNodeName, bool aDefaultValue)
+        {
+            if (aXElement == null) return aDefaultValue;
+            XElement aChildXElement = aXElement.Element(aChildNodeName);
+            if (aChildXElement == null) return aDefaultValue;
+            bool aValue = aDefaultValue;
+            return bool.TryParse(aChildXElement.Value, out aValue) ? aValue : aDefaultValue;
+        }
+
         public static string GetAttributeValue(this XElement aXElement, string aAttributeName)
         {
             if (aXElement == null) throw new System.ApplicationException($"无法从无效的Xml结点中提取[{aAttributeName}]属性！");
@@ -97,8 +142,7 @@ namespace PengSW.XmlHelper
         public static DateTime GetDateTime(this XElement aParentXElement, string aXPath, string aPromptName = "")
         {
             XElement aDateTimeXElement = aParentXElement.GetXElement(aXPath, aPromptName);
-            DateTime aDateTime;
-            if (!DateTime.TryParse(aDateTimeXElement.Value, out aDateTime)) throw new ApplicationException(string.Format("无效的日期或时间：[{0}]！", aDateTimeXElement.Value));
+            if (!DateTime.TryParse(aDateTimeXElement.Value, out DateTime aDateTime)) throw new ApplicationException(string.Format("无效的日期或时间：[{0}]！", aDateTimeXElement.Value));
             return aDateTime;
         }
 
@@ -106,16 +150,14 @@ namespace PengSW.XmlHelper
         {
             XElement aTimeSpanXElement = aParentXElement.GetXElement(aXPath, aPromptName);
             string aTimeSpanText = System.Text.RegularExpressions.Regex.Replace(aTimeSpanXElement.Value, @"(\d+:\d+:\d+):(\d+)", "$1.$2");
-            TimeSpan aTimeSpan;
-            if (!TimeSpan.TryParse(aTimeSpanText, out aTimeSpan)) throw new ApplicationException(string.Format("无效的日期或时间：[{0}]！", aTimeSpanText));
+            if (!TimeSpan.TryParse(aTimeSpanText, out TimeSpan aTimeSpan)) throw new ApplicationException(string.Format("无效的日期或时间：[{0}]！", aTimeSpanText));
             return aTimeSpan;
         }
 
         public static int GetInt(this XElement aParentXElement, string aXPath, string aPromptName = "")
         {
             XElement aIntXElement = aParentXElement.GetXElement(aXPath, aPromptName);
-            int aInt;
-            if (!int.TryParse(aIntXElement.Value, out aInt)) throw new System.ApplicationException(string.Format("无效的整数值：[{0}]！", aIntXElement.Value));
+            if (!int.TryParse(aIntXElement.Value, out int aInt)) throw new System.ApplicationException(string.Format("无效的整数值：[{0}]！", aIntXElement.Value));
             return aInt;
         }
 
@@ -136,16 +178,14 @@ namespace PengSW.XmlHelper
         public static double GetDouble(this XElement aParentXElement, string aXPath, string aPromptName = "")
         {
             XElement aValueXElement = aParentXElement.GetXElement(aXPath, aPromptName);
-            double aValue;
-            if (!double.TryParse(aValueXElement.Value, out aValue)) throw new System.ApplicationException(string.Format("无效的数值：[{0}]！", aValueXElement.Value));
+            if (!double.TryParse(aValueXElement.Value, out double aValue)) throw new System.ApplicationException(string.Format("无效的数值：[{0}]！", aValueXElement.Value));
             return aValue;
         }
 
         public static bool GetBool(this XElement aParentXElement, string aXPath, string aPromptName = "")
         {
             XElement aValueXElement = aParentXElement.GetXElement(aXPath, aPromptName);
-            bool aValue;
-            if (!bool.TryParse(aValueXElement.Value, out aValue)) throw new System.ApplicationException(string.Format("无效的逻辑值：[{0}]！", aValueXElement.Value));
+            if (!bool.TryParse(aValueXElement.Value, out bool aValue)) throw new System.ApplicationException(string.Format("无效的逻辑值：[{0}]！", aValueXElement.Value));
             return aValue;
         }
 
@@ -156,6 +196,11 @@ namespace PengSW.XmlHelper
                 aAssemblyEnabled ? new XAttribute("Assembly", aObject.GetType().Assembly.FullName) : null,
                 new XAttribute("TypeName", aObject.GetType().FullName));
             return aXElement;
+        }
+
+        public static XElement WriteTypeToXml<T>(this XElement aXElement, T aObject, bool aAssemblyEnabled = true)
+        {
+            return aObject.WriteTypeToXml(aXElement, aAssemblyEnabled);
         }
 
         public static T CreateObjectFromXml<T>(this XElement aXElement, string aDefaultAssembly = null)
@@ -196,6 +241,12 @@ namespace PengSW.XmlHelper
             }
         }
 
+        public static byte[] GetBytes(this XElement aXElement)
+        {
+            if (aXElement == null) return null;
+            return System.Convert.FromBase64String(aXElement.Value);
+        }
+
         public static int GetIntAttribute(this XElement aXElement, string aAttributeName, int aDefaultValue)
         {
             try
@@ -211,8 +262,7 @@ namespace PengSW.XmlHelper
         public static bool GetBoolAttribute(this XElement aXElement, string aAttributeName)
         {
             string aValueString = aXElement.GetAttributeValue(aAttributeName);
-            bool aValue;
-            if (!bool.TryParse(aValueString, out aValue)) throw new System.ApplicationException(string.Format("[{0}]中的属性[{1}]无法解析为逻辑值！", aXElement, aAttributeName));
+            if (!bool.TryParse(aValueString, out bool aValue)) throw new System.ApplicationException(string.Format("[{0}]中的属性[{1}]无法解析为逻辑值！", aXElement, aAttributeName));
             return aValue;
         }
 
@@ -231,8 +281,7 @@ namespace PengSW.XmlHelper
         public static double GetDoubleAttribute(this XElement aXElement, string aAttributeName)
         {
             string aValueString = aXElement.GetAttributeValue(aAttributeName);
-            double aValue;
-            if (!double.TryParse(aValueString, out aValue)) throw new System.ApplicationException(string.Format("[{0}]中的属性[{1}]无法解析为数值！", aXElement, aAttributeName));
+            if (!double.TryParse(aValueString, out double aValue)) throw new System.ApplicationException(string.Format("[{0}]中的属性[{1}]无法解析为数值！", aXElement, aAttributeName));
             return aValue;
         }
 
@@ -277,6 +326,11 @@ namespace PengSW.XmlHelper
         {
             if (aAttributeValue == null) return null;
             return new XAttribute(aAttributeName, aAttributeValue.ToString("hh\\:mm\\:ss\\.fff"));
+        }
+        public static XElement CreateXElement(this byte[] aBytes, string aXmlNodeName)
+        {
+            if (aBytes == null) return null;
+            return new XElement(aXmlNodeName, Convert.ToBase64String(aBytes));
         }
     }
 }

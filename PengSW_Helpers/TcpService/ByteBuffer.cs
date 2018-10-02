@@ -24,6 +24,7 @@ namespace PengSW.TcpService
         {
             get
             {
+                if (_TotalBytes != null && _TotalBytes.Length == _TotalByteCount) return _TotalBytes;
                 // 将数据帧拼接成一个完整的字节块
                 byte[] aTotalBytes = new byte[_TotalByteCount];
                 long i = 0;
@@ -32,9 +33,11 @@ namespace PengSW.TcpService
                     System.Array.Copy(bBytes, 0, aTotalBytes, i, bBytes.Length);
                     i += bBytes.Length;
                 }
+                _TotalBytes = aTotalBytes;
                 return aTotalBytes;
             }
         }
+        private byte[] _TotalBytes;
 
         /// <summary>
         /// 构造并返回最近收到的字节块（如果只有一块，则返回这一块，否则返回最后两块合并在一起的字节块)
@@ -63,6 +66,7 @@ namespace PengSW.TcpService
         {
             _BytesList.Clear();
             _TotalByteCount = 0;
+            _TotalBytes = null;
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Xml;
 using System.Runtime.Serialization.Formatters.Soap;
+using System;
 
 namespace PengSW.XmlHelper
 {
@@ -34,6 +35,14 @@ namespace PengSW.XmlHelper
             if (aTargetNode == null) return aDefaultValue;
             bool aValue = aDefaultValue;
             if (!bool.TryParse(aTargetNode.InnerText, out aValue)) return aDefaultValue;
+            return aValue;
+        }
+
+        public static TimeSpan GetXPathValue(this XmlNode aXmlNode, string aXPath, TimeSpan aDefaultValue)
+        {
+            XmlNode aTargetNode = aXmlNode?.SelectSingleNode(aXPath);
+            if (aTargetNode == null) return aDefaultValue;
+            if (!TimeSpan.TryParse(aTargetNode.InnerText, out TimeSpan aValue)) return aDefaultValue;
             return aValue;
         }
 

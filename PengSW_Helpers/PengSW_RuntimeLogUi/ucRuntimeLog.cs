@@ -19,7 +19,7 @@ namespace PengSW.RuntimeLog
 
         public int ReserveDays { get; set; }
 
-        public void Bind(RL aRuntimeLog)
+        public void Bind(RuntimeLog aRuntimeLog)
         {
             uciRuntimeLogView.Bind(aRuntimeLog);
             _Clearer.Bind(aRuntimeLog);
@@ -34,11 +34,11 @@ namespace PengSW.RuntimeLog
         {
             if (uciRuntimeLogView.RuntimeLog == null)
             {
-                RL.OpenLogFile();
+                RL.OpenLog();
             }
             else
             {
-                uciRuntimeLogView.RuntimeLog.Open();
+                uciRuntimeLogView.RuntimeLog.OpenLog();
             }
         }
 

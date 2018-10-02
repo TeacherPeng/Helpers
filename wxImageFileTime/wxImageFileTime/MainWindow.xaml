@@ -1,0 +1,62 @@
+﻿<Window x:Class="wxImageFileTime.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:wxImageFileTime"
+        xmlns:converters="clr-namespace:PengSW.Converters;assembly=PengSW_Converters"
+        mc:Ignorable="d"
+        Title="微信文件名时间戳转换时间值" Height="450" Width="800" Icon="resources/logo.ico">
+    <Window.Resources>
+        <RoutedCommand x:Key="SelectFolder" />
+        <RoutedCommand x:Key="SelectFiles" />
+        <RoutedCommand x:Key="Start" />
+        <RoutedCommand x:Key="ClearAll" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" TrueBrush="Black" FalseBrush="LightGray" />
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource SelectFolder}" Executed="OnSelectFolder_Executed" CanExecute="OnSelectFolder_CanExecute" />
+        <CommandBinding Command="{StaticResource SelectFiles}" Executed="OnSelectFiles_Executed" CanExecute="OnSelectFiles_CanExecute" />
+        <CommandBinding Command="{StaticResource Start}" Executed="OnStart_Executed" CanExecute="OnStart_CanExecute" />
+        <CommandBinding Command="{StaticResource ClearAll}" Executed="OnClearAll_Executed" CanExecute="OnClearAll_CanExecute" />
+    </Window.CommandBindings>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" Padding="10">
+            <MenuItem Header="选择文件夹" Command="{StaticResource SelectFolder}" />
+            <MenuItem Header="选择文件" Command="{StaticResource SelectFiles}" />
+            <MenuItem Header="全部清除" Command="{StaticResource ClearAll}" />
+            <MenuItem Header="开始改名" Command="{StaticResource Start}" />
+        </Menu>
+        <DataGrid ItemsSource="{Binding Items}" CanUserAddRows="False" CanUserDeleteRows="True" AutoGenerateColumns="False">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="源文件名" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding SourceFileName}" ToolTip="{Binding SourceFullFileName}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="目标文件名" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding TargetFileName}" Foreground="{Binding IsRenamable,Converter={StaticResource BoolToBrushConverter}}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding TargetFileName,UpdateSourceTrigger=PropertyChanged}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="！" Foreground="Red" ToolTip="{Binding RenameExceptionMessage}" Visibility="{Binding RenameExceptionMessage,Converter={StaticResource NullToVisibilityConverter}}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

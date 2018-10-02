@@ -1,10 +1,10 @@
-﻿using PengSW.NotifyPropertyChanged;
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Windows.Threading;
+using PengSW.NotifyPropertyChanged;
 
 namespace PengSW.TcpService
 {
@@ -19,16 +19,16 @@ namespace PengSW.TcpService
         /// 构造函数
         ///     构造时指定准备使用的通讯协议。
         /// </summary>
-        /// <param name="aProtocol">准备使用的通讯协议实例</param>
+        /// <param name="aProtocol">准备使用的通讯协议实例，Protocol实例不支持多个Connection实例共用。</param>
         public Connection(Protocol aProtocol, string aName)
         {
             Name = aName;
-            _Dispatcher = Dispatcher.CurrentDispatcher;
 
             // 保存准备使用的通讯协议
             Protocol = aProtocol;
             if (Protocol != null)
             {
+                Protocol.SetConnection(this);
                 Protocol.ByteFrameReceived += new System.Action<byte[]>(Protocol_ByteFrameReceived);
                 Protocol.StringFrameReceived += new System.Action<string>(Protocol_StringFrameReceived);
                 Protocol.ObjectFrameReceived += new System.Action<object>(Protocol_ObjectFrameReceived);
@@ -36,17 +36,19 @@ namespace PengSW.TcpService
                 ReceiveTimeOut = Protocol.ReceiveTimeOut;
             }
 
-            AllConnections.Add(this);
-
             _ReceiveBuffer = new byte[ReceiveBufferLength];
             _ReadCallback = new AsyncCallback(ReadCallback);
 
-            _ReceiveTimeOutTimer = new DispatcherTimer();
-            _ReceiveTimeOutTimer.Interval = ReceiveTimeOut;
+            _ReceiveTimeOutTimer = new DispatcherTimer()
+            {
+                Interval = ReceiveTimeOut
+            };
             _ReceiveTimeOutTimer.Tick += OnRecveTimeOut_Tick;
 
-            _HeartbeatTimer = new DispatcherTimer();
-            _HeartbeatTimer.Interval = HeartBeatInterval;
+            _HeartbeatTimer = new DispatcherTimer()
+            {
+                Interval = HeartBeatInterval
+            };
             _HeartbeatTimer.Tick += OnHeartbeat_Tick;
         }
 
@@ -63,7 +65,7 @@ namespace PengSW.TcpService
             }
             catch (Exception ex)
             {
-                ClarifyInfo($"Connection {this} 的工作线程发生错误：{ex.Message}，断开连接。", 0);
+                ClarifyInfo($"工作线程发生错误：{ex.Message}，断开连接。", 0);
                 Disconnect();
             }
         }
@@ -75,7 +77,6 @@ namespace PengSW.TcpService
             Disconnect();
         }
 
-        private Dispatcher _Dispatcher;
         public string Name { get; }
 
         private void OnProtocol_Clarify(string aInfo, int aLevel)
@@ -113,16 +114,16 @@ namespace PengSW.TcpService
         public void WorkWith(TcpClient aTcpClient)
         {
             // 检查是否已经存在TcpClient和NetworkStream
-            if (_TcpClient != null) throw new System.ApplicationException("已经存在一个TcpClient！");
-            if (_NetworkStream != null) throw new System.ApplicationException("已经存在一个网络流！");
+            if (_TcpClient != null) throw new ApplicationException("已经存在一个TcpClient！");
+            if (_NetworkStream != null) throw new ApplicationException("已经存在一个网络流！");
 
             // 检查指定TcpClient对象
-            if (aTcpClient == null || !aTcpClient.Connected) throw new System.ApplicationException("指定TcpClient无效或未连接！");
+            if (aTcpClient == null || !aTcpClient.Connected) throw new ApplicationException("指定TcpClient无效或未连接！");
 
             // 创建网络工作流
             _TcpClient = aTcpClient;
             _NetworkStream = aTcpClient.GetStream();
-            if (!_NetworkStream.CanRead || !_NetworkStream.CanWrite) throw new System.ApplicationException("网络数据流不可读或不可写！");
+            if (!_NetworkStream.CanRead || !_NetworkStream.CanWrite) throw new ApplicationException("网络数据流不可读或不可写！");
 
             RemoteHost = System.Net.IPAddress.Parse(((System.Net.IPEndPoint)_TcpClient.Client.RemoteEndPoint).Address.ToString()).ToString();
             RemotePort = ((System.Net.IPEndPoint)_TcpClient.Client.RemoteEndPoint).Port;
@@ -146,6 +147,7 @@ namespace PengSW.TcpService
             Working = true;
             Connected?.Invoke(this, null);
             OnPropertyChanged(nameof(IsConnected));
+            _Dispatcher.Invoke(() => AllConnections.Add(this));
         }
 
         /// <summary>
@@ -214,6 +216,7 @@ namespace PengSW.TcpService
             CloseTcpClient();
             Disconnected?.Invoke(this, null);
             OnPropertyChanged(nameof(IsConnected));
+            _Dispatcher.Invoke(() => AllConnections.Remove(this));
         }
 
         #endregion
@@ -227,7 +230,7 @@ namespace PengSW.TcpService
         /// <param name="aLevel">信息级别</param>
         private void ClarifyInfo(string aInfo, int aLevel)
         {
-            Clarify?.Invoke(this, string.Format("{0} {1}", ToString(), aInfo), aLevel);
+            Clarify?.Invoke(this, $"{this}{aInfo}", aLevel);
         }
         public delegate void ClarifyDelegate(Connection aConnection, string aInfo, int aLevel);
         public event ClarifyDelegate Clarify;
@@ -327,7 +330,7 @@ namespace PengSW.TcpService
         /// 连接描述串
         /// </summary>
         /// <returns>连接描述串</returns>
-        public override string ToString() => $"[Connection {Name}:{RemoteHost}:{RemotePort}-local:{LocalPort}]";
+        public override string ToString() => $"[{Name}:{RemoteHost}:{RemotePort}-local:{LocalPort}]";
 
         /// <summary>
         /// 检测连接是否建立
@@ -349,10 +352,10 @@ namespace PengSW.TcpService
             try
             {
                 if (!Working) return;
-                ClarifyInfo($"Connection {this} 收到数据……", 1);
                 int aReadBytesCount = _NetworkStream.EndRead(ar);
                 if (aReadBytesCount > 0)
                 {
+                    // ClarifyInfo($"收到[{aReadBytesCount}]字节的数据……", 1);
                     byte[] aCopy = new byte[aReadBytesCount];
                     System.Array.Copy(_ReceiveBuffer, aCopy, aReadBytesCount);
 
@@ -360,14 +363,25 @@ namespace PengSW.TcpService
                     ClarifyBytesReceived(aCopy);
 
                     // 协议实例分析数据
-                    if (Protocol != null) Protocol.ClarifyReceivedBytes(this, aCopy);
+                    if (Protocol != null) Protocol.OnBytesReceived(aCopy);
+                    _NetworkStream.BeginRead(_ReceiveBuffer, 0, _ReceiveBuffer.Length, _ReadCallback, null);
                 }
-                _NetworkStream.BeginRead(_ReceiveBuffer, 0, _ReceiveBuffer.Length, _ReadCallback, null);
+                else throw new ApplicationException("连接中断");
+            }
+            catch (ApplicationException ex)
+            {
+                ClarifyInfo($"{ex.Message}，连接将断开。", 0);
+                Disconnect();
+            }
+            catch (IOException ex)
+            {
+                ClarifyInfo($"{ex.Message}，连接将断开。", 0);
+                Disconnect();
             }
             catch (Exception ex)
             {
-                ClarifyInfo($"Connection {this} 的接收线程发生错误：{ex.Message}，连接将断开。", 0);
-                ClarifyInfo(ex.StackTrace, 4);
+                ClarifyInfo($"{ex.Message}，连接将断开。", 0);
+                ClarifyInfo(ex.StackTrace, 9);
                 Disconnect();
             }
         }
@@ -379,7 +393,7 @@ namespace PengSW.TcpService
         private TcpClient _TcpClient = null;
         private NetworkStream _NetworkStream = null;
         private byte[] _ReceiveBuffer;
-        private AsyncCallback _ReadCallback;
+        private readonly AsyncCallback _ReadCallback;
         private DispatcherTimer _ReceiveTimeOutTimer;
         private DispatcherTimer _HeartbeatTimer;
 
@@ -403,12 +417,12 @@ namespace PengSW.TcpService
             {
                 try
                 {
-                    ClarifyInfo($"关闭连接{this}的TcpClient……", 1);
+                    ClarifyInfo($"关闭TcpClient……", 1);
                     _TcpClient.Close();
                 }
                 catch (System.Exception ex)
                 {
-                    ClarifyInfo($"关闭连接{this}的TcpClient发生错误：{ex.Message}", 0);
+                    ClarifyInfo($"关闭TcpClient发生错误：{ex.Message}", 0);
                 }
                 finally
                 {
@@ -426,12 +440,12 @@ namespace PengSW.TcpService
             {
                 try
                 {
-                    ClarifyInfo($"关闭连接到{this}的网络流……", 1);
+                    ClarifyInfo($"关闭网络流……", 1);
                     _NetworkStream.Close();
                 }
                 catch (System.Exception ex)
                 {
-                    ClarifyInfo($"关闭连接到{this}的网络流发生错误：{ex.Message}", 0);
+                    ClarifyInfo($"关闭网络流发生错误：{ex.Message}", 0);
                 }
                 finally
                 {
@@ -461,13 +475,14 @@ namespace PengSW.TcpService
         public void Dispose()
         {
             if (IsConnected) Disconnect();
-            AllConnections.Remove(this);
         }
 
         #endregion
 
         #region 已建立的连接实例集合
 
+        private static Dispatcher _Dispatcher = Dispatcher.CurrentDispatcher;
+        public static void SetUIDispatcher(Dispatcher aDispatcher) => _Dispatcher = aDispatcher;
         public static ObservableCollection<Connection> AllConnections { get; } = new ObservableCollection<Connection>();
 
         #endregion

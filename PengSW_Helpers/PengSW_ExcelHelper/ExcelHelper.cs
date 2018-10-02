@@ -4,6 +4,12 @@ namespace PengSW.ExcelHelper
 {
     public static class ExcelHelper
     {
+        public static string GetCellValue(this Worksheet aWorksheet, int aRow, int aCol)
+        {
+            Range aCell = aWorksheet.Cells[aRow, aCol] as Range;
+            return aCell.Value?.ToString();
+        }
+
         public static string GetCellText(this Worksheet aWorksheet, int aRow, int aCol)
         {
             Range aCell = aWorksheet.Cells[aRow, aCol] as Range;

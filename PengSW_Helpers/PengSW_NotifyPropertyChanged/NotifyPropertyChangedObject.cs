@@ -1,6 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace PengSW.NotifyPropertyChanged
 {
@@ -9,23 +9,21 @@ namespace PengSW.NotifyPropertyChanged
     {
         #region INotifyPropertyChanged实现
 
-        protected void SetValue<T>(ref T aMember, T aValue, params string[] aPropertyNames)
+        protected bool SetValue<T>(ref T aMember, T aValue, params string[] aPropertyNames)
         {
-            if (object.Equals(aMember, aValue)) return;
+            if (object.Equals(aMember, aValue)) return false;
             aMember = aValue;
             OnPropertiesChanged(aPropertyNames);
+            return true;
         }
 
-        protected void OnPropertyChanged(string aPropertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(aPropertyName));
-        }
+        protected void OnPropertyChanged(string aPropertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(aPropertyName));
 
         protected void OnPropertiesChanged(params string[] aPropertyNames)
         {
             foreach (string aPropertyName in aPropertyNames) OnPropertyChanged(aPropertyName);
         }
-
+        
         [field:NonSerialized]
         public event PropertyChangedEventHandler PropertyChanged;
 
