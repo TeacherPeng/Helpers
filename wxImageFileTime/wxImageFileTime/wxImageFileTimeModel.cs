@@ -57,11 +57,8 @@ namespace wxImageFileTime
                 }
                 if (TargetFileName == null) TargetFileName = SourceFileName;
             }
-            public string SourceFullFileName { get => _SourceFullFileName; set { if (_SourceFullFileName == value) return; _SourceFullFileName = value; OnPropertyChanged(nameof(SourceFullFileName)); } }
-            private string _SourceFullFileName;
-
-            public string SourceFileName { get => _SourceFileName; set { SetValue(ref _SourceFileName, value, nameof(SourceFileName), nameof(IsRenamable)); } }
-            private string _SourceFileName;
+            public string SourceFullFileName { get; }
+            public string SourceFileName { get; }
 
             public string TargetFileName { get => _TargetFileName; set { SetValue(ref _TargetFileName, value, nameof(TargetFileName), nameof(IsRenamable)); } }
             private string _TargetFileName;
